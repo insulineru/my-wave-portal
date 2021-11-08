@@ -222,7 +222,36 @@ const getAllWaves = async () => {
   }
 }
 
-onMounted(() => {
-  checkIfWalletIsConnected()
+onMounted(async () => {
+  await checkIfWalletIsConnected()
+
+  let wavePortalContract: ethers.Contract;
+
+  const onNewWave = (from: string, timestamp: number, message: string) => {
+    console.log('NewWave', from, timestamp, message)
+    const currentWaves = allWaves.value
+
+    currentWaves.push({
+      waver: from,
+      timestamp: new Date(timestamp * 1000),
+      message: message,
+    })
+
+    allWaves.value = currentWaves
+  };
+
+  if (window.ethereum) {
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const signer = provider.getSigner();
+
+    wavePortalContract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+    wavePortalContract.on('NewWave', onNewWave);
+  }
+
+  return () => {
+    if (wavePortalContract) {
+      wavePortalContract.off('NewWave', onNewWave);
+    }
+  };
 })
 </script>
