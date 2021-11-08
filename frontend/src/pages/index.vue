@@ -106,7 +106,7 @@ const currentAccount = ref(null)
 const allWaves = ref<IWave[]>([])
 const totalWaves = ref<number | null>(null)
 
-const CONTRACT_ADDRESS = "0xe82D358987F375779e73F785038F25E44fb96D8e"
+const CONTRACT_ADDRESS = "0x5980E782E46fd3832A143902b25c50E5d10b326c"
 const CONTRACT_ABI = abi.abi
 
 const checkIfWalletIsConnected = async () => {
