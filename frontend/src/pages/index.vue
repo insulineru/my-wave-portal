@@ -1,31 +1,28 @@
-<script setup lang="ts">
-const name = ref('')
-
-const router = useRouter()
-const go = () => {
-  if (name.value)
-    router.push(`/hi/${encodeURIComponent(name.value)}`)
-}
-</script>
-
 <template>
   <div>
-    <div i-carbon-campsite text-4xl inline-block />
+    <div text-4xl inline-block>👋🏻</div>
     <p>
-      <a rel="noreferrer" href="https://github.com/antfu/vitesse-lite" target="_blank">
-        Vitesse Lite
-      </a>
+      <a
+        rel="noreferrer"
+        href="https://github.com/antfu/vitesse-lite"
+        target="_blank"
+      >Отправь свое сообщение напрямую в Blockchain</a>
     </p>
     <p>
-      <em text-sm op75>Opinionated Vite Starter Template</em>
+      <em text-sm op75>
+        Отправь
+        <a class="text-purple-600" href="instagram.com/insuline.ru">мне</a>
+        текстовое сообщение с карьерным советом, а то я не могу определиться.
+        <br />С шансом в 20% – я верну тебе стоимость отправки твоего сообщения на твой ETH адрес
+      </em>
     </p>
 
     <div py-4 />
 
     <input
       id="input"
-      v-model="name"
-      placeholder="What's your name?"
+      v-model="message"
+      placeholder="Что посоветуешь?"
       type="text"
       autocomplete="false"
       p="x-4 y-2"
@@ -34,17 +31,190 @@ const go = () => {
       bg="transparent"
       border="~ rounded gray-200 dark:gray-700"
       outline="none active:none"
-      @keydown.enter="go"
-    >
+    />
 
     <div>
-      <button
-        class="m-3 text-sm btn"
-        :disabled="!name"
-        @click="go"
-      >
-        Go
-      </button>
+      <button class="m-3 text-sm btn" :disabled="!message" @click="wave">Отправить</button>
+    </div>
+
+    <div v-if="!currentAccount">
+      <button class="m-3 text-sm btn" :disabled="!message" @click="connectWallet">Войти через MetaMask</button>
+    </div>
+
+    <div class="flex flex-col">
+    <div class="-my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+      <div class="py-2 align-middle inline-block min-w-full sm:px-6 lg:px-8">
+        <div class="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Отправитель
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Сообщение
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Дата отправки
+                </th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <tr v-for="(wave, index) in allWaves" :key="index">
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="flex items-center">
+                      <div class="text-sm font-medium text-gray-900">
+                        {{ wave.waver }}
+                      </div>
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm text-gray-900">{{ wave.message }}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                    Active
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
+  </div>
 </template>
+
+<script setup lang="ts">
+// TODO: Разобраться web3.js + typescript и вернуть тайпскрипт
+import abi from '~/utils/wavePortal.json'
+import { ethers } from 'ethers'
+
+interface IWave {
+  waver: string,
+  timestamp: number | Date,
+  message: string
+}
+
+const message = ref('')
+const currentAccount = ref(null)
+const allWaves = ref<IWave[]>([])
+const totalWaves = ref<number | null>(null)
+
+const CONTRACT_ADDRESS = "0xe82D358987F375779e73F785038F25E44fb96D8e"
+const CONTRACT_ABI = abi.abi
+
+const checkIfWalletIsConnected = async () => {
+  try {
+    const { ethereum } = window
+
+    if (!ethereum) {
+      console.log("Make sure you have metamask!")
+      return
+    } else {
+      console.log("We have the ethereum object", ethereum)
+    }
+
+    const accounts = await ethereum.request({ method: 'eth_accounts' })
+
+    if (accounts.length !== 0) {
+      const account = accounts[0]
+      console.log("Found an authorized account:", account)
+      currentAccount.value = account
+      getAllWaves()
+    } else {
+      console.log("No authorized account found")
+    }
+  } catch (error) {
+    console.log(error)
+  }
+}
+
+const connectWallet = async () => {
+  try {
+    const { ethereum } = window
+
+    if (!ethereum) {
+      alert("Get MetaMask!")
+      return
+    }
+
+    const accounts = await ethereum.request({ method: "eth_requestAccounts" })
+
+    console.log("Connected", accounts[0])
+    currentAccount.value = accounts[0]
+
+    const provider = new ethers.providers.Web3Provider(ethereum)
+    const signer = provider.getSigner()
+    const wavePortalContract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer)
+
+    let count = await wavePortalContract.getTotalWaves()
+    totalWaves.value = count.toNumber()
+  } catch (error) {
+    console.log(error)
+  }
+}
+
+const wave = async () => {
+  try {
+    const { ethereum } = window
+
+    if (ethereum) {
+      const provider = new ethers.providers.Web3Provider(ethereum)
+      const signer = provider.getSigner()
+      const wavePortalContract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer)
+
+      let count = await wavePortalContract.getTotalWaves()
+      totalWaves.value = count.toNumber()
+      console.log("Retrieved total wave count...", count.toNumber())
+
+      const waveTxn = await wavePortalContract.wave(message.value)
+      console.log("Mining...", waveTxn.hash)
+
+      message.value = ''
+      await waveTxn.wait()
+      console.log("Mined -- ", waveTxn.hash)
+
+      count = await wavePortalContract.getTotalWaves()
+      totalWaves.value = count.toNumber()
+      console.log("Retrieved total wave count...", count.toNumber())
+    } else {
+      console.log("Ethereum object doesn't exist!")
+    }
+  } catch (error) {
+    console.log(error)
+  }
+}
+
+const getAllWaves = async () => {
+  try {
+    const { ethereum } = window
+    if (ethereum) {
+      const provider = new ethers.providers.Web3Provider(ethereum)
+      const signer = provider.getSigner()
+      const wavePortalContract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer)
+
+
+      const waves = await wavePortalContract.getAllWaves()
+      const wavesCleaned: IWave[] = waves.map((wave: { waver: string, timestamp: number, message: string }) => {
+        return {
+          waver: wave.waver,
+          timestamp: new Date(wave.timestamp * 1000),
+          message: wave.message
+        }
+      })
+
+      allWaves.value = wavesCleaned
+    } else {
+      console.log("Ethereum object doesn't exist!")
+    }
+  } catch (error) {
+    console.log(error)
+  }
+}
+
+onMounted(() => {
+  checkIfWalletIsConnected()
+})
+</script>
