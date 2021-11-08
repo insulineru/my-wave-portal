@@ -34,55 +34,58 @@
     />
 
     <div>
-      <button class="m-3 text-sm btn" :disabled="!message" @click="wave">Отправить</button>
+      <button
+        class="m-3 text-sm btn"
+        :disabled="!message || isSending"
+        @click="wave"
+      >{{ isSending ? 'Отправка' : 'Отправить' }}</button>
     </div>
 
     <div v-if="!currentAccount">
-      <button class="m-3 text-sm btn" :disabled="!message" @click="connectWallet">Войти через MetaMask</button>
+      <button class="m-3 text-sm btn" @click="connectWallet">Войти через MetaMask</button>
     </div>
 
-    <div class="flex flex-col">
-    <div class="-my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
-      <div class="py-2 align-middle inline-block min-w-full sm:px-6 lg:px-8">
-        <div class="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-              <tr>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Отправитель
-                </th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Сообщение
-                </th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Дата отправки
-                </th>
-              </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-              <tr v-for="(wave, index) in allWaves" :key="index">
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="flex items-center">
-                      <div class="text-sm font-medium text-gray-900">
-                        {{ wave.waver }}
-                      </div>
+    <div class="flex flex-col" v-if="allWaves.length > 0">
+      <div class="-my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+        <div class="py-2 align-middle inline-block min-w-full sm:px-6 lg:px-8">
+          <div class="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th
+                    scope="col"
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >Отправитель</th>
+                  <th
+                    scope="col"
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >Сообщение</th>
+                  <th
+                    scope="col"
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >Дата отправки</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr v-for="(wave, index) in allWaves" :key="index">
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center">
+                      <div class="text-sm font-medium text-gray-900">{{ wave.waver }}</div>
                     </div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm text-gray-900">{{ wave.message }}</div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                    Active
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">{{ wave.message }}</div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">{{ wave.timestamp.toLocaleString() }}</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
-  </div>
   </div>
 </template>
 
@@ -98,6 +101,7 @@ interface IWave {
 }
 
 const message = ref('')
+const isSending = ref(false)
 const currentAccount = ref(null)
 const allWaves = ref<IWave[]>([])
 const totalWaves = ref<number | null>(null)
@@ -169,16 +173,20 @@ const wave = async () => {
       totalWaves.value = count.toNumber()
       console.log("Retrieved total wave count...", count.toNumber())
 
+      isSending.value = true
       const waveTxn = await wavePortalContract.wave(message.value)
       console.log("Mining...", waveTxn.hash)
 
       message.value = ''
       await waveTxn.wait()
       console.log("Mined -- ", waveTxn.hash)
+      isSending.value = false
 
       count = await wavePortalContract.getTotalWaves()
       totalWaves.value = count.toNumber()
       console.log("Retrieved total wave count...", count.toNumber())
+      getAllWaves()
+
     } else {
       console.log("Ethereum object doesn't exist!")
     }
@@ -205,7 +213,7 @@ const getAllWaves = async () => {
         }
       })
 
-      allWaves.value = wavesCleaned
+      allWaves.value = wavesCleaned.reverse()
     } else {
       console.log("Ethereum object doesn't exist!")
     }
