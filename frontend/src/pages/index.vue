@@ -11,7 +11,7 @@
     <p>
       <em text-sm op75>
         Отправь
-        <a class="text-purple-600" href="instagram.com/insuline.ru">мне</a>
+        <a class="text-purple-600" href="https://instagram.com/insuline.ru" rel="noopener noreferrer" target="_blank">мне</a>
         текстовое сообщение с карьерным советом, а то я не могу определиться.
         <br />С шансом в 20% – я верну тебе стоимость отправки твоего сообщения на твой ETH адрес
       </em>
